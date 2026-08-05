@@ -1,0 +1,82 @@
+syntax = "proto3";
+
+package inventory.v1;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/shenikar/microservices-course/shared/pkg/proto/inventory/v1;inventory_v1";
+
+service InventoryService {
+    rpc GetPart(GetPartRequest) returns (GetPartResponse);
+    rpc ListPart(ListPartRequest) returns (ListPartResponse);
+}
+
+enum Category {
+  UNKNOWN = 0;
+  ENGINE = 1;
+  FUEL = 2;
+  PORTHOLE = 3;
+  WING = 4;
+}
+
+message Part {
+    string uuid = 1;
+    string name = 2;
+    string description = 3;
+    double price = 4;
+    int64 stock_quantity = 5;
+    Category category = 6;
+    Dimensions dimensions = 7;
+    Manufacturer manufacturer = 8;
+    repeated string tags = 9;
+    map<string, Value> metadata = 10;
+    google.protobuf.Timestamp created_at = 11;
+    google.protobuf.Timestamp updated_at = 12;
+    
+}
+
+message Dimensions {
+    double lenght = 1;
+    double widht = 2;
+    double height = 3;
+    double weight = 4;
+}
+
+message Manufacturer {
+    string name = 1;
+    string country = 2;
+    string website = 3;
+}
+
+message Value {
+  oneof kind {
+    string string_value = 1;
+    int64 int64_value = 2;
+    double double_value = 3;
+    bool bool_value = 4;
+  }
+}
+
+message GetPartRequest {
+    string uuid = 1;
+}
+
+message GetPartResponse {
+    Part part = 1;
+}
+
+message ListPartRequest {
+    optional PartsFilter filter = 1;
+}
+
+message ListPartResponse {
+    repeated Part part = 1;
+}
+
+message PartsFilter {
+    repeated string uuids = 1;
+    repeated string name = 2;
+    repeated Category categories = 3;
+    repeated string manufacturer_countries = 4;
+    repeated string tags = 5; 
+}

@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package payment.v1;
+
+option go_package = "github.com/shenikar/microservices-course/shared/pkg/proto/payment/v1;payment_v1";
+
+service PaymentService {
+    rpc PayOrder (PayOrderRequest) returns (PayOrderResponse); 
+}
+
+enum PaymentMethod {
+    PAYMENT_METHOD_UNKNOWN = 0;
+    PAYMENT_METHOD_CARD = 1;
+    PAYMENT_METHOD_SBP = 2;
+    PAYMENT_METHOD_CREDIT_CARD = 3;
+    PAYMENT_METHOD_INVESTOR_MONEY = 4;
+}
+
+message PayOrderRequest {
+    string order_uuid = 1;
+    string user_uuid = 2;
+    PaymentMethod payment_method = 3;
+}
+
+message PayOrderResponse {
+    string transaction_uuid = 1;
+}
