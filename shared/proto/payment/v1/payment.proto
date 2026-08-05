@@ -4,24 +4,28 @@ package payment.v1;
 
 option go_package = "github.com/shenikar/microservices-course/shared/pkg/proto/payment/v1;payment_v1";
 
+// Сервис для обработки платежей.
 service PaymentService {
     rpc PayOrder (PayOrderRequest) returns (PayOrderResponse); 
 }
 
+// PaymentMethod определяет доступные способы оплаты.
 enum PaymentMethod {
-    PAYMENT_METHOD_UNKNOWN = 0;
+  PAYMENT_METHOD_UNSPECIFIED = 0;
     PAYMENT_METHOD_CARD = 1;
     PAYMENT_METHOD_SBP = 2;
     PAYMENT_METHOD_CREDIT_CARD = 3;
     PAYMENT_METHOD_INVESTOR_MONEY = 4;
 }
 
+// PayOrderRequest - сообщение запроса для метода PayOrder.
 message PayOrderRequest {
     string order_uuid = 1;
     string user_uuid = 2;
     PaymentMethod payment_method = 3;
 }
 
+// PayOrderResponse - сообщение ответа для метода PayOrder.
 message PayOrderResponse {
     string transaction_uuid = 1;
 }

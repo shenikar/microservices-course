@@ -6,19 +6,22 @@ import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/shenikar/microservices-course/shared/pkg/proto/inventory/v1;inventory_v1";
 
+// Основной сервис для управления инвентарем.
 service InventoryService {
     rpc GetPart(GetPartRequest) returns (GetPartResponse);
-    rpc ListPart(ListPartRequest) returns (ListPartResponse);
+    rpc ListParts(ListPartsRequest) returns (ListPartsResponse);
 }
 
+// Category определяет тип детали.
 enum Category {
-  UNKNOWN = 0;
-  ENGINE = 1;
-  FUEL = 2;
-  PORTHOLE = 3;
-  WING = 4;
+  CATEGORY_UNSPECIFIED = 0;
+  CATEGORY_ENGINE = 1;
+  CATEGORY_FUEL = 2;
+  CATEGORY_PORTHOLE = 3;
+  CATEGORY_WING = 4;
 }
 
+// Part представляет собой отдельный компонент для сборки космических кораблей.
 message Part {
     string uuid = 1;
     string name = 2;
@@ -35,19 +38,22 @@ message Part {
     
 }
 
+// Dimensions описывает физический размер и вес детали.
 message Dimensions {
-    double lenght = 1;
+    double length = 1;
     double widht = 2;
     double height = 3;
     double weight = 4;
 }
 
+// Manufacturer содержит информацию о названии, стране и веб-сайте производителя.
 message Manufacturer {
     string name = 1;
     string country = 2;
     string website = 3;
 }
 
+// Value - это гибкий тип для хранения различных видов метаданных.
 message Value {
   oneof kind {
     string string_value = 1;
@@ -57,25 +63,30 @@ message Value {
   }
 }
 
+// GetPartRequest - сообщение запроса для метода GetPart.
 message GetPartRequest {
     string uuid = 1;
 }
 
+// GetPartResponse - сообщение ответа для метода GetPart.
 message GetPartResponse {
     Part part = 1;
 }
 
-message ListPartRequest {
+// ListPartsRequest - сообщение запроса для метода ListParts.
+message ListPartsRequest {
     optional PartsFilter filter = 1;
 }
 
-message ListPartResponse {
-    repeated Part part = 1;
+// ListPartsResponse - сообщение ответа для метода ListParts.
+message ListPartsResponse {
+    repeated Part parts = 1;
 }
 
+// PartsFilter позволяет фильтровать детали по различным критериям.
 message PartsFilter {
     repeated string uuids = 1;
-    repeated string name = 2;
+    repeated string names = 2;
     repeated Category categories = 3;
     repeated string manufacturer_countries = 4;
     repeated string tags = 5; 
