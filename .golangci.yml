@@ -1,0 +1,67 @@
+# .golangci.yml
+# https://golangci-lint.run/usage/configuration/
+run:
+  timeout: 5m
+  skip-dirs:
+    - mocks
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - typecheck
+    - unused
+    - asciicheck
+    - bodyclose
+    - dogsled
+    - dupl
+    - durationcheck
+    - errname
+    - errorlint
+    - exhaustive
+    - exportloopref
+    - goconst
+    - gocritic
+    - gocyclo
+    - gofmt
+    - goimports
+    - misspell
+    - nakedret
+    - prealloc
+    - predeclared
+    - revive
+    - stylecheck
+    - unconvert
+    - unparam
+    - wastedassign
+    - whitespace
+
+linters-settings:
+  gocyclo:
+    min-complexity: 15
+  misspell:
+    locale: US
+  goimports:
+    local-prefixes: github.com/shenikar/geo_broadcasting_system
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - gocyclo
+        - errcheck
+        - dupl
+        - funlen
+        - goconst
+
+# https://golangci-lint.run/usage/false-positives/
+# https://golangci-lint.run/usage/configuration/#output-configuration
+output:
+  formats:
+    - format: colored-line-number
+  print-issued-lines: true
+  print-linter-name: true
+  uniq-by-line: true
