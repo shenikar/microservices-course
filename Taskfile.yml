@@ -32,7 +32,7 @@ vars:
 
   OPEN_API_FILES: '{{.ROOT_DIR}}/shared/api/bundles'
 
-  MODULES: assembly inventory order payment platform iam notification
+  MODULES: shared assembly inventory order payment platform iam notification
 
 tasks:
   install-formatters:
@@ -235,7 +235,14 @@ tasks:
         for mod in {{.MODULES}}; do
           if [ -d "$mod" ]; then
             echo "🔄 Обновление зависимостей в $mod"
-            (cd "$mod" && go mod tidy -compat=1.24) || exit 1
+            (cd "$mod" && go mod tidy -compat=1.25) || exit 1
+          fi
+        done
+        echo "🔄 Обновление зависимостей в go.mod во всех модулях"
+        for mod in {{.MODULES}}; do
+          if [ -d "$mod" ]; then
+            echo "🔄 Обновление зависимостей в $mod"
+            (cd "$mod" && go mod tidy -compat=1.25) || exit 1
           fi
         done
 

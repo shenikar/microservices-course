@@ -7,6 +7,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 
@@ -179,6 +180,7 @@ func main() {
 	s := grpc.NewServer()
 	inventoryServer := newServer()
 	inventory_v1.RegisterInventoryServiceServer(s, inventoryServer)
+	reflection.Register(s)
 
 	log.Printf("Сервер InventoryService запущен на порту %s", grpcPort)
 	if err := s.Serve(lis); err != nil {
