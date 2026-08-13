@@ -1,0 +1,5 @@
+type: object
+properties:
+  transaction_uuid:
+    type: string
+    format: uuid

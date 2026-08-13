@@ -1,0 +1,13 @@
+type: object
+properties:
+  user_uuid:
+    type: string
+    format: uuid
+  part_uuids:
+    type: array
+    items:
+      type: string
+      format: uuid
+required:
+  - user_uuid
+  - part_uuids

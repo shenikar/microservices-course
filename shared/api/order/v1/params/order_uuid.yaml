@@ -1,0 +1,6 @@
+name: order_uuid
+in: path
+required: true
+schema:
+  type: string
+  format: uuid

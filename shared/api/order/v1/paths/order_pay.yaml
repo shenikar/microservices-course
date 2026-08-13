@@ -1,0 +1,24 @@
+post:
+  summary: Оплата заказа
+  operationId: payOrder
+  parameters:
+    - $ref: '../params/order_uuid.yaml'
+  requestBody:
+    required: true
+    content:
+      application/json:
+        schema:
+          $ref: '../components/pay_order_request.yaml'
+  responses:
+    '200':
+      description: Заказ успешно оплачен
+      content:
+        application/json:
+          schema:
+            $ref: '../components/pay_order_response.yaml'
+    '404':
+      description: Заказ не найден
+      content:
+        application/json:
+          schema:
+            $ref: '../components/errors/not_found_error.yaml'

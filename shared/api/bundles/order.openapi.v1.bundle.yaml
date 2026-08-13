@@ -1,0 +1,230 @@
+openapi: 3.0.4
+info:
+  title: OrderService
+  version: 1.0.0
+paths:
+  /api/v1/orders:
+    post:
+      summary: Создание заказа
+      operationId: createOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/create_order_request'
+      responses:
+        '200':
+          description: Заказ успешно создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/create_order_response'
+        '400':
+          description: Неверный формат запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/bad_request_error'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/internal_server_error'
+  /api/v1/orders/{order_uuid}:
+    get:
+      summary: Получить заказ по UUID
+      operationId: getOrder
+      parameters:
+        - $ref: '#/components/parameters/order_uuid'
+      responses:
+        '200':
+          description: Информация о заказе
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/get_order_response'
+        '404':
+          description: Заказ не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/not_found_error'
+  /api/v1/orders/{order_uuid}/pay:
+    post:
+      summary: Оплата заказа
+      operationId: payOrder
+      parameters:
+        - $ref: '#/components/parameters/order_uuid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/pay_order_request'
+      responses:
+        '200':
+          description: Заказ успешно оплачен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/pay_order_response'
+        '404':
+          description: Заказ не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/not_found_error'
+  /api/v1/orders/{order_uuid}/cancel:
+    post:
+      summary: Отмена заказа
+      operationId: cancelOrder
+      parameters:
+        - $ref: '#/components/parameters/order_uuid'
+      responses:
+        '204':
+          description: Заказ успешно отменен
+        '404':
+          description: Заказ не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/not_found_error'
+        '409':
+          description: Конфликт. Заказ уже оплачен и не может быть отменен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/conflict_error'
+components:
+  schemas:
+    create_order_request:
+      type: object
+      properties:
+        user_uuid:
+          type: string
+          format: uuid
+        part_uuids:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+        - user_uuid
+        - part_uuids
+    create_order_response:
+      type: object
+      properties:
+        order_uuid:
+          type: string
+          format: uuid
+        total_price:
+          type: number
+          format: double
+    bad_request_error:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+    internal_server_error:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+    payment_method:
+      type: string
+      enum:
+        - PAYMENT_METHOD_UNSPECIFIED
+        - PAYMENT_METHOD_CARD
+        - PAYMENT_METHOD_SBP
+        - PAYMENT_METHOD_CREDIT_CARD
+        - PAYMENT_METHOD_INVESTOR_MONEY
+      x-enum-varnames:
+        - PAYMENT_METHOD_UNSPECIFIED
+        - PAYMENT_METHOD_CARD
+        - PAYMENT_METHOD_SBP
+        - PAYMENT_METHOD_CREDIT_CARD
+        - PAYMENT_METHOD_INVESTOR_MONEY
+    order_status:
+      type: string
+      enum:
+        - ORDER_STATUS_UNSPECIFIED
+        - ORDER_STATUS_PENDING_PAYMENT
+        - ORDER_STATUS_PAID
+        - ORDER_STATUS_CANCELLED
+      x-enum-varnames:
+        - ORDER_STATUS_UNSPECIFIED
+        - ORDER_STATUS_PENDING_PAYMENT
+        - ORDER_STATUS_PAID
+        - ORDER_STATUS_CANCELLED
+    get_order_response:
+      type: object
+      properties:
+        order_uuid:
+          type: string
+          format: uuid
+        user_uuid:
+          type: string
+          format: uuid
+        part_uuids:
+          type: array
+          items:
+            type: string
+            format: uuid
+        total_price:
+          type: number
+          format: double
+        transaction_uuid:
+          type: string
+          format: uuid
+        payment_method:
+          $ref: '#/components/schemas/payment_method'
+        status:
+          $ref: '#/components/schemas/order_status'
+    not_found_error:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+    pay_order_request:
+      type: object
+      properties:
+        payment_method:
+          $ref: '#/components/schemas/payment_method'
+      required:
+        - payment_method
+    pay_order_response:
+      type: object
+      properties:
+        transaction_uuid:
+          type: string
+          format: uuid
+    conflict_error:
+      type: object
+      properties:
+        code:
+          type: integer
+          format: int32
+        message:
+          type: string
+  parameters:
+    order_uuid:
+      name: order_uuid
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+x-ogen:
+  target: shared/pkg/openapi/order/v1
+  package: v1

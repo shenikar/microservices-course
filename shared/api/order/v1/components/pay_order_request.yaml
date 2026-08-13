@@ -1,0 +1,6 @@
+type: object
+properties:
+  payment_method:
+    $ref: 'enums/payment_method.yaml'
+required:
+  - payment_method
