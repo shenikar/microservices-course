@@ -1,0 +1,11 @@
+{
+  "name": "microservices-course",
+  "version": "1.0.0",
+  "description": "Homework for microservices course",
+  "scripts": {
+    "redocly": "redocly"
+  },
+  "devDependencies": {
+    "@redocly/cli": "^2.46.1"
+  }
+}
