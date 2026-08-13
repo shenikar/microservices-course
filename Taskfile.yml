@@ -2,15 +2,15 @@ version: '3'
 
 # Глобальные переменные проекта
 vars:
-  GO_VERSION: '1.24'
-  GOLANGCI_LINT_VERSION: 'v2.1.5'
-  GCI_VERSION: 'v0.13.6'
-  GOFUMPT_VERSION: 'v0.8.0'
-  BUF_VERSION: '1.53.0'
-  PROTOC_GEN_GO_VERSION: 'v1.36.6'
-  PROTOC_GEN_GO_GRPC_VERSION: 'v1.5.1'
-  OGEN_VERSION: 'v1.12.0'
-  YQ_VERSION: 'v4.45.2'
+  GO_VERSION: '1.25'
+  GOLANGCI_LINT_VERSION: 'v2.12.2'
+  GCI_VERSION: 'v0.14.0'
+  GOFUMPT_VERSION: 'v0.11.0'
+  BUF_VERSION: '1.72.0'
+  PROTOC_GEN_GO_VERSION: 'v1.36.11'
+  PROTOC_GEN_GO_GRPC_VERSION: 'v1.6.2'
+  OGEN_VERSION: 'v1.22.0'
+  YQ_VERSION: 'v4.53.3'
   GRPCURL_VERSION: 'v1.9.3'
 
   BIN_DIR: '{{.ROOT_DIR}}/bin'
@@ -137,12 +137,10 @@ tasks:
     cmds:
       - |
         [ -f {{.BUF}} ] || {
-          mkdir -p {{.BIN_DIR}} tmp-buf
-          curl -sSL \
-            "https://github.com/bufbuild/buf/releases/download/v{{.BUF_VERSION}}/buf-$(uname -s)-$(uname -m).tar.gz" \
-            | tar -xz -C tmp-buf
-          mv tmp-buf/buf/bin/buf {{.BUF}}
-          rm -rf tmp-buf
+          mkdir -p {{.BIN_DIR}}
+          echo "📦 Устанавливаем buf v{{.BUF_VERSION}}..."
+          curl -sSL -o {{.BUF}} \
+            "https://github.com/bufbuild/buf/releases/download/v{{.BUF_VERSION}}/buf-$(uname -s)-$(uname -m)"
           chmod +x {{.BUF}}
         }
 
