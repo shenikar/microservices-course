@@ -3,9 +3,11 @@ package main
 import (
 	"context"
 	"log"
+	"net"
 
 	"github.com/google/uuid"
 	payment_v1 "github.com/shenikar/microservices-course/shared/pkg/proto/payment/v1"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -26,5 +28,18 @@ func (s *server) PayOrder(ctx context.Context, in *payment_v1.PayOrderRequest) (
 }
 
 func main() {
+	lis, err := net.Listen("tcp", grpcPort)
+	if err != nil {
+		log.Fatalf("failed to listen: %v", err)
+	}
+
+	s := grpc.NewServer()
+
+	payment_v1.RegisterPaymentServiceServer(s, &server{})
+
+	log.Printf("The server is running on the port %s", grpcPort)
+	if err := s.Serve(lis); err != nil {
+		log.Fatalf("Error when starting the server: %v", err)
+	}
 
 }
