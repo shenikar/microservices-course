@@ -4,6 +4,9 @@ import (
 	"context"
 	"log"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -43,6 +46,10 @@ func newServer() *server {
 			Tags:          []string{"двигатель", "гипердвигатель", "надежность"},
 			CreatedAt:     timestamppb.Now(),
 			UpdatedAt:     timestamppb.Now(),
+			Metadata: map[string]*inventory_v1.Value{
+				"power_rating": {Kind: &inventory_v1.Value_StringValue{"9000 GW"}},
+				"warranty":     {Kind: &inventory_v1.Value_Int64Value{12}}, // 12 months
+			},
 		},
 		{
 			Uuid:          "c4f2b1a8-3c9b-4b16-8f3a-2d7a8e6c5b4d",
@@ -56,6 +63,10 @@ func newServer() *server {
 			Tags:          []string{"топливо", "бак", "безопасность"},
 			CreatedAt:     timestamppb.Now(),
 			UpdatedAt:     timestamppb.Now(),
+			Metadata: map[string]*inventory_v1.Value{
+				"capacity_liters": {Kind: &inventory_v1.Value_DoubleValue{100000.0}},
+				"material":        {Kind: &inventory_v1.Value_StringValue{"Titanium-Alloy"}},
+			},
 		},
 	}
 	for _, part := range initialParts {
@@ -182,8 +193,21 @@ func main() {
 	inventory_v1.RegisterInventoryServiceServer(s, inventoryServer)
 	reflection.Register(s)
 
-	log.Printf("Сервер InventoryService запущен на порту %s", grpcPort)
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("Ошибка при запуске сервера: %v", err)
-	}
+	// Graceful shutdown
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		log.Printf("Сервер InventoryService запущен на порту %s", grpcPort)
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("Ошибка при запуске сервера: %v", err)
+		}
+	}()
+
+	<-shutdown
+	log.Println("Сервер останавливается...")
+
+	s.GracefulStop()
+
+	log.Println("Сервер успешно остановлен.")
 }

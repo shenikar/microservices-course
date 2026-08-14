@@ -4,6 +4,9 @@ import (
 	"context"
 	"log"
 	"net"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/google/uuid"
 	payment_v1 "github.com/shenikar/microservices-course/shared/pkg/proto/payment/v1"
@@ -39,9 +42,21 @@ func main() {
 	payment_v1.RegisterPaymentServiceServer(s, &server{})
 	reflection.Register(s)
 
-	log.Printf("The server is running on the port %s", grpcPort)
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("Error when starting the server: %v", err)
-	}
+	// Graceful shutdown
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
 
+	go func() {
+		log.Printf("The server is running on the port %s", grpcPort)
+		if err := s.Serve(lis); err != nil {
+			log.Fatalf("Error when starting the server: %v", err)
+		}
+	}()
+
+	<-shutdown
+	log.Println("Сервер останавливается...")
+
+	s.GracefulStop()
+
+	log.Println("Сервер успешно остановлен.")
 }
