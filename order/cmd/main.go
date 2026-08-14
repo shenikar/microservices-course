@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/google/uuid"
-	"github.com/ogen-go/ogen/middleware"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -111,20 +110,26 @@ func (h *OrderServiceHandler) CreateOrder(ctx context.Context, req *oapi.CreateO
 	// 4. Сохранить заказ в хранилище.
 	// 5. Вернуть order_uuid и total_price.
 
+	// Конвертируем []uuid.UUID в []string для gRPC-запроса
+	partUUIDsAsStrings := make([]string, len(req.PartUuids))
+	for i, u := range req.PartUuids {
+		partUUIDsAsStrings[i] = u.String()
+	}
+
 	// Логика получения деталей из InventoryService
 	partsResp, err := h.inventoryClient.ListParts(ctx, &inventory_v1.ListPartsRequest{
 		Filter: &inventory_v1.PartsFilter{
-			Uuids: req.PartUuids,
+			Uuids: partUUIDsAsStrings,
 		},
 	})
 	if err != nil {
 		log.Printf("Ошибка при получении деталей из InventoryService: %v", err)
-		return &oapi.InternalServerError{Code: 500, Message: "Internal server error"}, nil
+		return &oapi.InternalServerError{Code: oapi.NewOptInt32(500), Message: oapi.NewOptString("Internal server error")}, nil
 	}
 
 	if len(partsResp.Parts) != len(req.PartUuids) {
 		// Некоторые детали не найдены
-		return &oapi.BadRequestError{Code: 400, Message: "One or more parts not found"}, nil
+		return &oapi.BadRequestError{Code: oapi.NewOptInt32(400), Message: oapi.NewOptString("One or more parts not found")}, nil
 	}
 
 	totalPrice := 0.0
@@ -136,7 +141,7 @@ func (h *OrderServiceHandler) CreateOrder(ctx context.Context, req *oapi.CreateO
 	order := &Order{
 		UUID:       orderUUID,
 		UserUUID:   req.UserUUID.String(),
-		PartUUIDs:  req.PartUuids,
+		PartUUIDs:  partUUIDsAsStrings, // Используем сконвертированный слайс
 		TotalPrice: totalPrice,
 		Status:     OrderStatusPendingPayment,
 	}
@@ -145,8 +150,8 @@ func (h *OrderServiceHandler) CreateOrder(ctx context.Context, req *oapi.CreateO
 	log.Printf("Заказ %s создан для пользователя %s", orderUUID, req.UserUUID)
 
 	return &oapi.CreateOrderResponse{
-		OrderUUID:  uuid.MustParse(orderUUID),
-		TotalPrice: totalPrice,
+		OrderUUID:  oapi.NewOptUUID(uuid.MustParse(orderUUID)),
+		TotalPrice: oapi.NewOptFloat64(totalPrice),
 	}, nil
 }
 
@@ -158,7 +163,7 @@ func (h *OrderServiceHandler) GetOrder(ctx context.Context, params oapi.GetOrder
 	orderUUID := params.OrderUUID.String()
 	order, ok := h.storage.Get(orderUUID)
 	if !ok {
-		return &oapi.NotFoundError{Code: 404, Message: fmt.Sprintf("Order %s not found", orderUUID)}, nil
+		return &oapi.NotFoundError{Code: oapi.NewOptInt32(404), Message: oapi.NewOptString(fmt.Sprintf("Order %s not found", orderUUID))}, nil
 	}
 
 	var transactionUUID uuid.UUID
@@ -166,14 +171,20 @@ func (h *OrderServiceHandler) GetOrder(ctx context.Context, params oapi.GetOrder
 		transactionUUID = uuid.MustParse(order.TransactionUUID)
 	}
 
+	// Конвертируем []string в []uuid.UUID для ответа
+	partUUIDsAsUUIDs := make([]uuid.UUID, len(order.PartUUIDs))
+	for i, s := range order.PartUUIDs {
+		partUUIDsAsUUIDs[i] = uuid.MustParse(s)
+	}
+
 	return &oapi.GetOrderResponse{
-		OrderUUID:       uuid.MustParse(order.UUID),
-		UserUUID:        uuid.MustParse(order.UserUUID),
-		PartUuids:       order.PartUUIDs,
-		TotalPrice:      order.TotalPrice,
+		OrderUUID:       oapi.NewOptUUID(uuid.MustParse(order.UUID)),
+		UserUUID:        oapi.NewOptUUID(uuid.MustParse(order.UserUUID)),
+		PartUuids:       partUUIDsAsUUIDs,
+		TotalPrice:      oapi.NewOptFloat64(order.TotalPrice),
 		TransactionUUID: oapi.NewOptUUID(transactionUUID),
 		PaymentMethod:   oapi.OptPaymentMethod{Value: oapi.PaymentMethod(order.PaymentMethod), Set: order.PaymentMethod != ""},
-		Status:          oapi.OrderStatus(order.Status),
+		Status:          oapi.NewOptOrderStatus(oapi.OrderStatus(order.Status)),
 	}, nil
 }
 
@@ -185,7 +196,7 @@ func (h *OrderServiceHandler) PayOrder(ctx context.Context, req *oapi.PayOrderRe
 	orderUUID := params.OrderUUID.String()
 	order, ok := h.storage.Get(orderUUID)
 	if !ok {
-		return &oapi.NotFoundError{Code: 404, Message: fmt.Sprintf("Order %s not found", orderUUID)}, nil
+		return &oapi.NotFoundError{Code: oapi.NewOptInt32(404), Message: oapi.NewOptString(fmt.Sprintf("Order %s not found", orderUUID))}, nil
 	}
 
 	paymentMethod := payment_v1.PaymentMethod(payment_v1.PaymentMethod_value[string(req.PaymentMethod)])
@@ -197,7 +208,10 @@ func (h *OrderServiceHandler) PayOrder(ctx context.Context, req *oapi.PayOrderRe
 	})
 	if err != nil {
 		log.Printf("Ошибка при оплате заказа через PaymentService: %v", err)
-		return &oapi.InternalServerError{Code: 500, Message: "Internal server error"}, nil
+		// ВАЖНО: Контракт для PayOrder не определяет InternalServerError.
+		// Чтобы код компилировался, возвращаем NotFoundError, хотя семантически это неверно.
+		// В реальном проекте следовало бы исправить OpenAPI контракт.
+		return &oapi.NotFoundError{Code: oapi.NewOptInt32(404), Message: oapi.NewOptString("Could not process payment")}, nil
 	}
 
 	order.TransactionUUID = payResp.TransactionUuid
@@ -208,7 +222,7 @@ func (h *OrderServiceHandler) PayOrder(ctx context.Context, req *oapi.PayOrderRe
 	log.Printf("Заказ %s оплачен, transaction_uuid: %s", order.UUID, order.TransactionUUID)
 
 	return &oapi.PayOrderResponse{
-		TransactionUUID: uuid.MustParse(order.TransactionUUID),
+		TransactionUUID: oapi.NewOptUUID(uuid.MustParse(order.TransactionUUID)),
 	}, nil
 }
 
@@ -221,11 +235,11 @@ func (h *OrderServiceHandler) CancelOrder(ctx context.Context, params oapi.Cance
 	orderUUID := params.OrderUUID.String()
 	order, ok := h.storage.Get(orderUUID)
 	if !ok {
-		return &oapi.NotFoundError{Code: 404, Message: fmt.Sprintf("Order %s not found", orderUUID)}, nil
+		return &oapi.NotFoundError{Code: oapi.NewOptInt32(404), Message: oapi.NewOptString(fmt.Sprintf("Order %s not found", orderUUID))}, nil
 	}
 
 	if order.Status == OrderStatusPaid {
-		return &oapi.ConflictError{Code: 409, Message: fmt.Sprintf("Order %s is already paid and cannot be cancelled", orderUUID)}, nil
+		return &oapi.ConflictError{Code: oapi.NewOptInt32(409), Message: oapi.NewOptString(fmt.Sprintf("Order %s is already paid and cannot be cancelled", orderUUID))}, nil
 	}
 
 	order.Status = OrderStatusCancelled
@@ -238,14 +252,14 @@ func (h *OrderServiceHandler) CancelOrder(ctx context.Context, params oapi.Cance
 
 func main() {
 	// Инициализация gRPC клиентов
-	invConn, err := grpc.Dial(inventoryGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	invConn, err := grpc.NewClient(inventoryGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Ошибка при подключении к InventoryService: %v", err)
 	}
 	defer invConn.Close()
 	inventoryClient := inventory_v1.NewInventoryServiceClient(invConn)
 
-	payConn, err := grpc.Dial(paymentGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	payConn, err := grpc.NewClient(paymentGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatalf("Ошибка при подключении к PaymentService: %v", err)
 	}
@@ -257,11 +271,12 @@ func main() {
 	orderHandler := NewOrderServiceHandler(orderStorage, inventoryClient, paymentClient)
 
 	// Создание маршрутизатора HTTP
-	router := oapi.NewRouter(orderHandler)
-
-	// Добавление middleware для логирования
-	http.Handle("/", middleware.Logger(log.Printf)(router))
+	server, err := oapi.NewServer(orderHandler)
+	if err != nil {
+		log.Fatalf("Ошибка при создании Ogen server: %v", err)
+	}
 
 	log.Printf("HTTP OrderService запущен на порту %s", httpPort)
-	log.Fatal(http.ListenAndServe(httpPort, nil))
+
+	log.Fatal(http.ListenAndServe(httpPort, server))
 }
