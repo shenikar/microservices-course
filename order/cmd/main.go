@@ -2,10 +2,15 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
+	"time"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -276,7 +281,29 @@ func main() {
 		log.Fatalf("Ошибка при создании Ogen server: %v", err)
 	}
 
-	log.Printf("HTTP OrderService запущен на порту %s", httpPort)
+	httpServer := &http.Server{
+		Addr:    httpPort,
+		Handler: server,
+	}
 
-	log.Fatal(http.ListenAndServe(httpPort, server))
+	// Graceful shutdown
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		log.Printf("HTTP OrderService запущен на порту %s", httpPort)
+		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("HTTP server ListenAndServe: %v", err)
+		}
+	}()
+	<-shutdown
+	log.Println("Server stoping...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := httpServer.Shutdown(ctx); err != nil {
+		log.Fatalf("Ошибка при остановке сервера: %v", err)
+	}
+
+	log.Println("The server has been successfully stopped.")
 }
